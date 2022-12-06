@@ -11,7 +11,7 @@ let chars = input |> List.ofSeq |> List.map string
 let solve win =
     chars
     |> List.windowed win
-    |> List.findIndex (fun ls -> ls |> set |> Set.count = win)
+    |> List.findIndex (set >> Set.count >> (=) win)
     |> (+) win
 
 let res1 = solve 4
