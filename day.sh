@@ -17,3 +17,4 @@ mkdir .vscode
 popd
 
 cp vscode-settings.json "day$1"/.vscode/settings.json
+cp boilerplate.fs "day$1"/Program.fs
