@@ -1,7 +1,5 @@
 open System.IO
 
-type File = { Name: string; Size: int64 }
-
 type Folder =
     { Files: (string * int64) list
       Children: string list }
