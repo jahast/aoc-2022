@@ -9,4 +9,10 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="test.txt">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+      </ItemGroup>
+
 </Project>

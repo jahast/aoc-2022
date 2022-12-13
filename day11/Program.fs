@@ -1,26 +1,47 @@
 open System.IO
 open System.Text.RegularExpressions
+open System
 
 let input = File.ReadAllLines("./input.txt") |> Array.toList
 
 let times a b = a * b
-let divisible a b = (a % b) = 0
+let divisible a b = (b % a) = 0
+let dupl f = (fun y -> f y y)
+
+type Monkey =
+    { WorryFunc: int -> int
+      TestFunc: int -> bool
+      TrueThrow: int
+      FalseThrow: int }
+
 
 let chunked =
     input
     |> List.filter ((<>) "")
     |> List.chunkBySize 6
 
+let parseInt (str: string) =
+    match Int32.TryParse str with
+    | true, num -> Some(num)
+    | _ -> None
+
 let monkeys =
     chunked
     |> List.map (fun lines ->
-        let coef = Regex("\d+").Match(lines[2]).Value |> int
+
+        let coef = Regex("\d+").Match(lines[2]).Value |> parseInt
+
+        let ff =
+            if lines[ 2 ].Contains "+" then
+                (+)
+            else
+                (times)
 
         let worryFunc =
-            if lines[ 2 ].Contains "+" then
-                (+) coef
-            else
-                times coef
+            match coef with
+            | None -> dupl ff
+            | Some (num) -> ff num
+
 
         let testFunc =
             Regex("\d+").Match(lines[3]).Value
@@ -30,7 +51,10 @@ let monkeys =
         let trueThrow = Regex("\d+").Match(lines[4]).Value |> int
         let falseThrow = Regex("\d+").Match(lines[5]).Value |> int
 
-        (worryFunc, testFunc, trueThrow, falseThrow))
+        { WorryFunc = worryFunc
+          TestFunc = testFunc
+          TrueThrow = trueThrow
+          FalseThrow = falseThrow })
 
 let items =
     chunked
@@ -43,15 +67,46 @@ let items =
     |> List.mapi (fun i x -> (i, x))
     |> Map
 
+let (>.) x f = (fun y -> f y x)
 
 let states =
     [ 0..19 ]
     |> List.fold
-        (fun is _ ->
-            [ 0 .. (monkeys.Length) ]
+        (fun state round ->
+            printfn "%A" round
+
+            [ 0 .. (monkeys.Length - 1) ]
             |> List.fold
-                (fun items idx ->
-                    match idx with
-                    | _ -> items)
-                is)
-        items
+                (fun (items, acc) idx ->
+
+                    let itemsToDistribute = Map.find idx items
+                    let monkey = monkeys[idx]
+
+                    let newItems =
+                        itemsToDistribute
+                        |> List.map (monkey.WorryFunc)
+                        |> List.map (3 >. (/))
+                        |> List.fold
+                            (fun its it ->
+                                if (monkey.TestFunc it) then
+                                    Map.change monkey.TrueThrow (Option.map ([ it ] >. (@))) its
+                                else
+                                    Map.change monkey.FalseThrow (Option.map ([ it ] >. (@))) its)
+                            items
+                        |> Map.add idx []
+
+                    let newAcc = List.updateAt idx (itemsToDistribute.Length + (List.item idx acc)) acc
+
+                    (newItems, newAcc)
+
+                    )
+                state)
+        (items, (List.replicate (monkeys.Length) 0))
+
+let res1 =
+    snd states
+    |> List.sortDescending
+    |> List.take 2
+    |> List.fold (fun acc x -> acc * x) 1
+
+printfn "%A" res1
