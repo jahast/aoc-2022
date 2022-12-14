@@ -1,3 +1,3 @@
 open System.IO
 
-let input = File.ReadAllLines("./input.txt") |> Array.toList
+let input = File.ReadAllLines("./test.txt") |> Array.toList
