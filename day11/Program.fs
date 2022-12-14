@@ -110,3 +110,56 @@ let res1 =
     |> List.fold (fun acc x -> acc * x) 1
 
 printfn "%A" res1
+
+let divisors =
+    chunked
+    |> List.map (fun lines -> Regex("\d+").Match(lines[3]).Value |> int)
+
+type ItemCounter = { Divisor: int; Remainder: int }
+
+type Item = { Counters: ItemCounter list }
+
+let complexItems =
+    items
+    |> Map.map (fun key ls ->
+        ls
+        |> List.map (fun it ->
+            divisors
+            |> List.map (fun div -> { Divisor = div; Remainder = it % div })))
+
+let applyWorry f (counter: ItemCounter) =
+    { counter with Remainder = (f counter.Remainder) % counter.Divisor }
+
+// lazy
+let states2 =
+    [ 0..10000 ]
+    |> List.fold
+        (fun state round ->
+            printfn "%A" round
+
+            [ 0 .. (monkeys.Length - 1) ]
+            |> List.fold
+                (fun (items, acc) idx ->
+
+                    let itemsToDistribute = Map.find idx items
+                    let monkey = monkeys[idx]
+
+                    let newItems =
+                        itemsToDistribute
+                        |> List.map (monkey.WorryFunc)
+                        |> List.fold
+                            (fun its it ->
+                                if (monkey.TestFunc it) then
+                                    Map.change monkey.TrueThrow (Option.map ([ it ] >. (@))) its
+                                else
+                                    Map.change monkey.FalseThrow (Option.map ([ it ] >. (@))) its)
+                            items
+                        |> Map.add idx []
+
+                    let newAcc = List.updateAt idx (itemsToDistribute.Length + (List.item idx acc)) acc
+
+                    (newItems, newAcc)
+
+                    )
+                state)
+        (complexItems, (List.replicate (monkeys.Length) 0))
