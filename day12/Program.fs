@@ -1,7 +1,6 @@
 open System.IO
-open System
 
-let input = File.ReadAllLines("./test.txt") |> Array.toList
+let input = File.ReadAllLines("./input.txt") |> Array.toList
 
 let matrLs = input |> List.map (List.ofSeq >> List.map int)
 
@@ -37,36 +36,63 @@ let neighbourIdxs cur =
     [ (0, 1); (0, -1); (1, 0); (-1, 0) ]
     |> List.map (plus cur)
 
-let rec shortestPathNaive visited =
-    let cur = List.head visited
-    let curVal = Map.find cur matr
+let manhattan (x, y) (xx, yy) = (abs (x - xx)) + (abs (y - yy))
 
-    // let newBests =
-    //     bests
-    //     |> Map.change cur (fun v ->
-    //         let curLen = List.length visited
+let rec astar
+    (frontier: (int * (int * int)) list)
+    (cameFrom: Map<int * int, int * int>)
+    (costSoFar: Map<int * int, int>)
+    (goal: int * int)
+    (matrix: Map<int * int, int>)
+    =
 
-    //         match v with
-    //         | None -> Some(curLen)
-    //         | Some (num) -> Some(max num curLen))
-
-    if cur = start then
-        List.length visited
+    // just hack it
+    if frontier.Length = 0 then
+        None
     else
-        let validNeighbours =
-            cur
-            |> neighbourIdxs
-            |> List.filter (fun k -> Map.containsKey k matr)
-            |> List.filter (fun k -> not (List.contains k visited))
-            |> List.filter (fun k -> Map.find k matr |> ((-) curVal) |> (<=) 1)
+        let current = frontier |> List.minBy (fst) |> snd
 
-        if validNeighbours.Length = 0 then
-            100000
-        else
-            validNeighbours
-            |> List.map (fun k -> shortestPathNaive (k :: visited))
-            |> List.min
+        match current with
+        | x when x = goal -> Some((Map.find current costSoFar, cameFrom))
+        | _ ->
+            let curVal = Map.find current matr
 
-let res1 = shortestPathNaive [ finish ]
+            let newFrontier, newCameFrom, newCostSoFar =
+                (neighbourIdxs current)
+                |> List.filter (fun k -> Map.containsKey k matrix)
+                |> List.filter (fun k -> Map.find k matr |> ((-) curVal) |> (>=) 1)
+                |> List.filter (fun coord ->
+                    let newCost = (Map.find current costSoFar) + 1
+                    let nextCost = Option.defaultValue 100000000 (Map.tryFind coord costSoFar)
+                    newCost < nextCost)
+                |> List.fold
+                    (fun (frontier', cameFrom', costSoFar') coord ->
+                        let newCost = (Map.find current costSoFar) + 1
+                        let frontierCost = newCost + manhattan current goal
+                        let newFrontier = (frontierCost, coord) :: frontier'
+                        let newCameFrom = Map.add coord current cameFrom'
+                        let newCostSoFar = Map.add coord newCost costSoFar'
+                        (newFrontier, newCameFrom, newCostSoFar))
+                    (frontier, cameFrom, costSoFar)
+
+            let currentRemoved =
+                newFrontier
+                |> List.filter (fun x -> snd x |> (<>) current)
+
+            astar currentRemoved newCameFrom newCostSoFar goal matrix
+
+let traversed = astar [ (0, finish) ] Map.empty (Map [ finish, 0 ]) start matr
+
+let res1 = traversed |> Option.get |> fst
 
 printfn "%A" res1
+
+let res2 =
+    matr
+    |> Map.filter (fun k v -> v = 97)
+    |> Map.keys
+    |> Seq.map (fun k -> astar [ (0, finish) ] Map.empty (Map [ finish, 0 ]) k matr)
+    |> Seq.choose (Option.map fst)
+    |> Seq.min
+
+printfn "%A" res2
