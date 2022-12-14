@@ -73,8 +73,6 @@ let states =
     [ 0..19 ]
     |> List.fold
         (fun state round ->
-            printfn "%A" round
-
             [ 0 .. (monkeys.Length - 1) ]
             |> List.fold
                 (fun (items, acc) idx ->
@@ -125,18 +123,24 @@ let complexItems =
         ls
         |> List.map (fun it ->
             divisors
-            |> List.map (fun div -> { Divisor = div; Remainder = it % div })))
+            |> List.map (fun div -> { Divisor = div; Remainder = it % div }))
+        |> List.map (fun ls -> { Counters = ls }))
 
-let applyWorry f (counter: ItemCounter) =
-    { counter with Remainder = (f counter.Remainder) % counter.Divisor }
+let applyWorry f (item: Item) =
+    item.Counters
+    |> List.map (fun counter -> { counter with Remainder = (f counter.Remainder) % counter.Divisor })
+    |> (fun ls -> { Counters = ls })
+
+let testItem idx (item: Item) =
+    item.Counters
+    |> List.item idx
+    |> (fun i -> i.Remainder = 0)
 
 // lazy
 let states2 =
-    [ 0..10000 ]
+    [ 0..9999 ]
     |> List.fold
         (fun state round ->
-            printfn "%A" round
-
             [ 0 .. (monkeys.Length - 1) ]
             |> List.fold
                 (fun (items, acc) idx ->
@@ -146,20 +150,33 @@ let states2 =
 
                     let newItems =
                         itemsToDistribute
-                        |> List.map (monkey.WorryFunc)
+                        |> List.map (applyWorry monkey.WorryFunc)
                         |> List.fold
                             (fun its it ->
-                                if (monkey.TestFunc it) then
+                                if (testItem idx it) then
                                     Map.change monkey.TrueThrow (Option.map ([ it ] >. (@))) its
                                 else
                                     Map.change monkey.FalseThrow (Option.map ([ it ] >. (@))) its)
                             items
                         |> Map.add idx []
 
-                    let newAcc = List.updateAt idx (itemsToDistribute.Length + (List.item idx acc)) acc
+                    let newAcc =
+                        List.updateAt
+                            idx
+                            (int64 itemsToDistribute.Length
+                             + (List.item idx acc))
+                            acc
 
                     (newItems, newAcc)
 
                     )
                 state)
-        (complexItems, (List.replicate (monkeys.Length) 0))
+        (complexItems, (List.replicate (monkeys.Length) 0L))
+
+let res2 =
+    snd states2
+    |> List.sortDescending
+    |> List.take 2
+    |> List.fold (fun acc x -> acc * x) 1L
+
+printfn "%A" res2
