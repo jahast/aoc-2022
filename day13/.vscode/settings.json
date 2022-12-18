@@ -1,0 +1,6 @@
+{
+    "FSharp.inlayHints.typeAnnotations": false,
+    "FSharp.inlayHints.enabled": false,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "Ionide.Ionide-fsharp"
+}
